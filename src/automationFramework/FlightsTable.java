@@ -1,64 +1,89 @@
 package automationFramework;
-
+import java.io.FileWriter;
+import java.util.ArrayList;
 import java.util.List;
-
+import org.junit.Assert;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.FindBy;
+import com.google.common.collect.Ordering;
+import com.steadystate.css.parser.TokenMgrError;
 
 public class FlightsTable {
 
-	@FindBy(css= "table.generalTable > tbody > tr")
-	List<WebElement> tableRows;
-	
-	@FindBy(className = "FlightNum ")
-	List<WebElement> flightsNumbers;
-	
-	@FindBy(className = "FlightFrom  ")
-	List<WebElement> flightsFrom;
-	
-	@FindBy(className = "FlightTime  ")
-	List<WebElement> flightTimes;
-	
-	@FindBy(className = "finalTime   ")
-	List<WebElement> finalTimes;
-	
-	@FindBy(className = "localTerminal   ")
-	List<WebElement> localTerminals;
-	
-	@FindBy(className = "status   ")
-	List<WebElement> statusList;
-	
+	By flightTimeList = By.className("FlightTime ");
+	By sortFlightBySchedulerTime = By.cssSelector("span[data-sortexpression='SchedulerTime']");
+	By sortFilghtBySchedualerTimetIsUp = By.cssSelector("span.divSortTable.sortCurrent.sortUp");
+
+	By tableRow = By.cssSelector("tbody > tr");
+
 	WebDriver driver;
-	
-	public FlightsTable(WebDriver driver){
+
+	/**
+	 * constructor
+	 * @param driver
+	 */
+	public FlightsTable(WebDriver driver) {
 		this.driver = driver;
 	}
-	
-	public String toString(){
-		
-		String str="";
-		
-		for (WebElement row : tableRows ){
-				List<WebElement> rowCells = row.findElements(By.tagName("td"));
-				str += ("flight number: " + rowCells.get(2).getText() + " from: " + rowCells.get(3).getText() + " scheduled: " + rowCells.get(4).getText() +
-						" updated: " +  rowCells.get(5).getText() + " terminal: " + rowCells.get(6).getText() + " status: " + rowCells.get(7).getText() + "\n");
-		}
-		
-		return str;
+
+	/**
+	 * Clicks the sorting button of scheduler time
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	public FlightsTable clickSortingBySchedulerTime() throws Exception {
+		driver.findElement(sortFlightBySchedulerTime).click();
+		Thread.sleep(1500);
+		return this;
 	}
 	
-	public String getLine(){
-		
+	/**
+	 * check if sorted properly
+	 * @return
+	 * @throws Exception
+	 */
+	public FlightsTable checkFlightSchedualerTimeInOrder() throws Exception {
+
+		if (!(driver.findElements(sortFilghtBySchedualerTimetIsUp).size() > 0)) {
+			clickSortingBySchedulerTime();
+		}
+
+		List<WebElement> listOfSortedFlightSchedualerTime = driver.findElements(flightTimeList);
+		List<String> flightTime = new ArrayList<>();
+		for (WebElement flight : listOfSortedFlightSchedualerTime)
+			flightTime.add(flight.getText());
+		Assert.assertTrue("The flight time is not in order.", Ordering.natural().isOrdered(flightTime));
+		return this;
+	}
+	
+	/**
+	 * create flights details string
+	 * @return
+	 * @throws Exception
+	 */
+	public FlightsTable getAllFlightsDetails() throws Exception {
+		List<WebElement> listOfAllFlights = driver.findElements(tableRow);
 		String str = "";
-		
-		for (int i = 0; i < flightsFrom.size(); i++){
-			str += ("flight number: " + flightsNumbers.get(i).getText() + " from: " + flightsFrom.get(i).getText() + " scheduled: " + flightTimes.get(i).getText() +
-					" updated: " +  finalTimes.get(i).getText() + " terminal: " + localTerminals.get(i).getText() + " status: " + statusList.get(i).getText() + "\n");
-			
+		for (WebElement row : listOfAllFlights) {
+			str += row.getText().replaceAll("\n", " ") + "\n";
 		}
-		
-		return str;
+		printFlightDetailsToFile(str);
+		return this;
 	}
+	
+	/**
+	 * write flights details {@link TokenMgrError} a file
+	 * @param flightList
+	 * @return
+	 * @throws Exception
+	 */
+	private FlightsTable printFlightDetailsToFile(String flightList) throws Exception {
+		FileWriter fw = new FileWriter("flights.txt", false);
+		fw.write(flightList);
+		fw.flush();
+		return this;
+	}
+
 }
